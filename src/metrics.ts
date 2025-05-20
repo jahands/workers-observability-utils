@@ -20,36 +20,32 @@ function publishMetric(
   } as MetricPayload);
 }
 
-export const metrics = {
-  /**
-   * Record a count metric
-   * @param name - The metric name
-   * @param value - The count value (incremented by)
-   * @param tags - Optional tags
-   */
-  count(name: string, value: number = 1, tags: Tags = {}): void {
-    publishMetric(MetricType.COUNT, name, value, tags);
-  },
+/**
+ * Record a count metric
+ * @param name - The metric name
+ * @param value - The count value (incremented by)
+ * @param tags - Optional tags
+ */
+export function count(name: string, value: number = 1, tags: Tags = {}): void {
+  publishMetric(MetricType.COUNT, name, value, tags);
+}
 
-  /**
-   * Record a rate metric
-   * @param name - The metric name
-   * @param value - The rate value
-   * @param tags - Optional tags
-   */
-  rate(name: string, value: number = 1, tags: Tags = {}): void {
-    publishMetric(MetricType.RATE, name, value, tags);
-  },
+/**
+ * Record a rate metric
+ * @param name - The metric name
+ * @param value - The rate value
+ * @param tags - Optional tags
+ */
+export function rate(name: string, value: number = 1, tags: Tags = {}): void {
+  publishMetric(MetricType.RATE, name, value, tags);
+}
 
-  /**
-   * Record a gauge metric
-   * @param name - The metric name
-   * @param value - The gauge value
-   * @param tags - Optional tags
-   */
-  gauge(name: string, value: number, tags: Tags = {}): void {
-    publishMetric(MetricType.GAUGE, name, value, tags);
-  },
-};
-
-export default metrics;
+/**
+ * Record a gauge metric
+ * @param name - The metric name
+ * @param value - The gauge value
+ * @param tags - Optional tags
+ */
+export function gauge(name: string, value: number, tags: Tags = {}): void {
+  publishMetric(MetricType.GAUGE, name, value, tags);
+}

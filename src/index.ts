@@ -8,7 +8,7 @@ export * from "./metrics";
 export * from "./tail";
 export * from "./sinks/datadog";
 
-import metrics from "./metrics";
+import * as metrics from "./metrics";
 import { TailExporter } from "./tail";
 import { DatadogMetricSink } from "./sinks/datadog";
 

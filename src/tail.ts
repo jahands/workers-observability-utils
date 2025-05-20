@@ -3,6 +3,7 @@ import { MetricsDb } from "./metricsDb";
 import { TraceItem } from "@cloudflare/workers-types";
 import type { MetricSink } from "./sinks/sink";
 export { DatadogMetricSink } from "./sinks/datadog";
+
 export interface LogPayload {
   level: string;
   message: string;
@@ -31,10 +32,9 @@ export class TailExporter {
   #metricSink?: MetricSink;
   #maxBufferSize: number;
   #maxBufferDuration: number;
-
+  #flushId: number = 0;
   #metrics = new MetricsDb();
   #flushScheduled = false;
-  #schedulerHandle: any = null;
 
   constructor({ metrics, options }: TailExporterOptions) {
     this.#metricSink = metrics;
@@ -47,10 +47,24 @@ export class TailExporter {
       const metricEvents = traceItem.diagnosticsChannelEvents.filter(
         (el) => el.channel === METRICS_CHANNEL_NAME,
       );
+
+      const globalTags = {
+        scriptName: traceItem.scriptName || "unknown",
+        executionModel: traceItem.executionModel,
+        outcome: traceItem.outcome,
+        versionId: traceItem.scriptVersion?.id || "latest",
+      };
+
       for (const event of metricEvents) {
         const message = event.message;
         if (isValidMetric(message)) {
-          this.#metrics.storeMetric(message);
+          this.#metrics.storeMetric({
+            ...message,
+            tags: {
+              ...message.tags,
+              ...globalTags,
+            },
+          });
         } else {
           console.warn("Received invalid metric payload:", message);
         }
@@ -58,47 +72,30 @@ export class TailExporter {
     }
 
     if (this.#metrics.getMetricCount() >= this.#maxBufferSize) {
-      if (this.#flushScheduled && this.#schedulerHandle) {
-        // Cancel the scheduled flush
-        this.#schedulerHandle.abort();
+      if (this.#flushScheduled) {
         this.#flushScheduled = false;
       }
 
+      this.#flushId++;
       // Flush immediately
       ctx.waitUntil(this.#performFlush());
       return;
     }
 
-    // If a flush is already scheduled, don't schedule another one
     if (this.#flushScheduled) {
       return;
     }
 
-    // Schedule a flush after maxBufferDuration
     this.#flushScheduled = true;
-
-    const controller = new AbortController();
-    const { signal } = controller;
-    this.#schedulerHandle = controller;
-
     const scheduleFlush = async () => {
       try {
-        await scheduler.wait(this.#maxBufferDuration * 1000, { signal });
+        const localFlushId = ++this.#flushId;
+        await scheduler.wait(this.#maxBufferDuration * 1000);
 
-        await this.#performFlush();
-      } catch (error) {
-        if (error instanceof Error) {
-          // Handle abort error (this is expected when we cancel the scheduled flush)
-          if (error.name !== "AbortError") {
-            console.error("Error in scheduled flush:", error);
-          }
-
-          // Reset flush scheduled flag if aborted
-          if (error.name === "AbortError") {
-            this.#flushScheduled = false;
-          }
+        if (localFlushId === this.#flushId) {
+          await this.#performFlush();
         }
-      }
+      } catch (error) {}
     };
 
     // Wait for the scheduled flush to complete
@@ -112,7 +109,6 @@ export class TailExporter {
     // Reset batch and flush state
     this.#flushScheduled = false;
     this.#metrics.clearAll();
-    this.#schedulerHandle = null;
 
     // Skip if no items to flush
     if (items.length === 0) {
