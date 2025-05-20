@@ -1,5 +1,4 @@
 import { metrics } from 'workers-observability-utils';
-import { env } from 'cloudflare:workers';
 
 export interface Env {
 	// Datadog API keys
