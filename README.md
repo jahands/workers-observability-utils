@@ -7,7 +7,7 @@ A lightweight, zero-dependency package for capturing and exporting metrics from 
 - Collect and track `COUNT`, `GAUGE`, and `HISTOGRAM` metrics
 - Auto-aggregation of metrics based on type
 - Tag support for all metrics
-- Export metrics to Datadog (other providers coming soon)
+- Export metrics to multiple sinks (Datadog, Workers Analytics Engine)
 - Separate Tail Worker architecture for efficient metrics exporting
 
 ## Basic Usage
@@ -99,17 +99,22 @@ To efficiently export metrics to external providers, you should set up a dedicat
 
 ```typescript
 // tail-worker/src/index.ts
-import { TailExporter, DatadogMetricSink } from 'workers-observability-utils/tail';
+import { TailExporter, DatadogMetricSink, WorkersAnalyticsEngineSink } from 'workers-observability-utils/tail';
 
 export default new TailExporter({
-  metrics: new DatadogMetricSink({
-    site: 'us3.datadoghq.com',
-    // API key can be provided here or via environment variables
-    // apiKey: 'your-datadog-api-key'
-  }),
-  options: {
-    // Maximum number of metrics to buffer before flushing (default: 100)
-    maxBufferSize: 100,
+  metrics: {
+    sinks: [
+      new DatadogMetricSink({
+        site: 'us3.datadoghq.com',
+        // API key can be provided here or via environment variables
+        // apiKey: 'your-datadog-api-key'
+      }),
+      new WorkersAnalyticsEngineSink({
+        datasetBinding: env.ANALYTICS_ENGINE_DATASET
+      })
+    ],
+    // When using Workers Analytics Engine, a value of 20 or less is recommended due to soft limits
+    maxBufferSize: 20,
     // Maximum duration in seconds to buffer before flushing (default: 5, max: 30)
     maxBufferDuration: 5
   }
@@ -139,8 +144,24 @@ wrangler secret put DD_API_KEY
 }
 ```
 
-### Environment Variables
+### Environment Variables and Bindings
 
-The Tail Worker supports the following environment variables:
+The Tail Worker supports the following environment variables and bindings:
 
+#### For Datadog
 - `DD_API_KEY` or `DATADOG_API_KEY`: Your Datadog API key
+
+#### For Workers Analytics Engine
+- Requires an Analytics Engine dataset binding in your wrangler.jsonc:
+```jsonc
+{
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS_ENGINE_DATASET",
+      "dataset": "your-dataset-name"
+    }
+  ]
+}
+```
+
+**Note**: Workers Analytics Engine has a soft limit of 25 writes per invocation, so it's recommended to keep your maxBufferSize at 20 or lower when using this sink.

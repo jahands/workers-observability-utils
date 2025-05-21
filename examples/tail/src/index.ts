@@ -1,10 +1,17 @@
-import { TailExporter, DatadogMetricSink } from 'workers-observability-utils/tail';
+import { env } from 'cloudflare:workers';
+import { DatadogMetricSink, TailExporter, WorkersAnalyticsEngineSink } from 'workers-observability-utils/tail';
 
 export default new TailExporter({
-	metrics: new DatadogMetricSink({
-		site: 'us3.datadoghq.com',
-	}),
-	options: {
-		maxBufferDuration: 1,
+	metrics: {
+		sinks: [
+			new DatadogMetricSink({
+				site: 'us3.datadoghq.com',
+			}),
+			new WorkersAnalyticsEngineSink({
+				datasetBinding: env.METRICS_DATASET,
+			}),
+		],
+		maxBufferSize: 25,
+		maxBufferDuration: 5,
 	},
 });

@@ -3,6 +3,7 @@ import { MetricsDb } from "./metricsDb";
 import { TraceItem } from "@cloudflare/workers-types";
 import type { MetricSink } from "./sinks/sink";
 export { DatadogMetricSink } from "./sinks/datadog";
+export { WorkersAnalyticsEngineSink } from "./sinks/wae";
 
 export interface LogPayload {
   level: string;
@@ -13,11 +14,17 @@ export interface LogPayload {
 }
 
 export interface TailExporterOptions {
-  metrics?: MetricSink;
-  options?: {
+  metrics?: {
+    sinks: MetricSink[];
+    defaultMetrics?: {
+      cpuTime?: boolean; // default: true;
+      wallTime?: boolean; // default: true;
+      workersInvocation?: boolean; // default: true;
+    };
     /**
-     * Max number of events to buffer before flushing.
-     * Default: 1000
+     * Max number of unique metrics to buffer before flushing.
+     * Metric Uniqueness is defined by a combination of name and tags
+     * Default: 25
      */
     maxBufferSize?: number;
     /**
@@ -29,17 +36,17 @@ export interface TailExporterOptions {
 }
 
 export class TailExporter {
-  #metricSink?: MetricSink;
+  #metricSinks?: MetricSink[];
   #maxBufferSize: number;
   #maxBufferDuration: number;
   #flushId: number = 0;
   #metrics = new MetricsDb();
   #flushScheduled = false;
 
-  constructor({ metrics, options }: TailExporterOptions) {
-    this.#metricSink = metrics;
-    this.#maxBufferSize = options?.maxBufferSize || 100;
-    this.#maxBufferDuration = Math.min(options?.maxBufferDuration || 5, 30);
+  constructor({ metrics }: TailExporterOptions) {
+    this.#metricSinks = metrics?.sinks;
+    this.#maxBufferSize = metrics?.maxBufferSize || 100;
+    this.#maxBufferDuration = Math.min(metrics?.maxBufferDuration || 5, 30);
   }
 
   tail(traceItems: TraceItem[], env: any, ctx: ExecutionContext) {
@@ -53,7 +60,6 @@ export class TailExporter {
         executionModel: traceItem.executionModel,
         outcome: traceItem.outcome,
         versionId: traceItem.scriptVersion?.id,
-        scriptTag: traceItem.scriptVersion?.tag,
       };
 
       for (const event of metricEvents) {
@@ -62,8 +68,8 @@ export class TailExporter {
           this.#metrics.storeMetric({
             ...message,
             tags: {
-              ...message.tags,
               ...globalTags,
+              ...message.tags,
             },
             timestamp: event.timestamp,
           });
@@ -118,7 +124,17 @@ export class TailExporter {
     }
 
     try {
-      await this.#metricSink?.sendMetrics?.(items);
+      if (this.#metricSinks) {
+        const results = await Promise.allSettled(
+          this.#metricSinks?.map((sink) => sink.sendMetrics(items)),
+        );
+        const errors = results.filter((el) => el.status === "rejected");
+        for (const error of errors) {
+          console.error("Failed to flush some metrics", {
+            error: error.reason,
+          });
+        }
+      }
     } catch (error) {
       console.error("Error flushing batch:", error);
     }
