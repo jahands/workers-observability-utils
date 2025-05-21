@@ -96,14 +96,6 @@ With this library, you can send metrics to multiple destinations simultaneously.
 
 When using multiple sinks, metrics will be sent to all configured sinks in parallel. If one sink fails, the others will still receive the metrics.
 
-### Why Use a Tail Worker?
-
-- **Separation of concerns**: Your main worker focuses on business logic
-- **Performance**: Metric exporting won't impact your main worker's performance
-- **Resilience**: Failures in metric reporting won't affect your main worker
-- **Batching**: Efficiently aggregates and exports metrics in batches
-- **No added latency**: Metrics processing happens asynchronously
-
 ### Tail Worker Configuration
 
 1. Create a new Worker for handling tail events:
