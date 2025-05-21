@@ -29,7 +29,9 @@ export default {
     // Record gauge metric
     metrics.gauge('worker.connections.active', 42);
 
-    // Record histogram metric for response time
+    // Record histogram metric for response time.
+    // Note: Timers are not totally accurate in cloudflare worker environments
+    // but this can give an indication of relative performance
     const startTime = Date.now();
     const response = await processRequest();
     const responseTime = Date.now() - startTime;
