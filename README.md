@@ -68,8 +68,8 @@ This library supports three types of metrics:
    ```
 
    Histogram metrics automatically generate multiple derived metrics:
-   - Percentiles (as gauges): `worker.response_time.p50`, `worker.response_time.p95`, etc.
-   - Aggregates: `worker.response_time.avg`, `worker.response_time.max`, etc.
+   - Percentiles (as gauges): `worker.cpu_time.p50`, `worker.cpu_time.p95`, etc.
+   - Aggregates: `worker.cpu_time.avg`, `worker.cpu_time.max`, etc.
 
 ### Tags
 
