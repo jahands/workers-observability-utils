@@ -3,7 +3,7 @@ import { MetricsDb } from "./metricsDb";
 import { TraceItem } from "@cloudflare/workers-types";
 import type { MetricSink } from "./sinks/sink";
 export { DatadogMetricSink } from "./sinks/datadog";
-export { WorkersAnalyticsEngineSink } from "./sinks/wae";
+export { WorkersAnalyticsEngineSink } from "./sinks/workersAnalyticsEngine";
 
 export interface LogPayload {
   level: string;
@@ -42,11 +42,23 @@ export class TailExporter {
   #flushId: number = 0;
   #metrics = new MetricsDb();
   #flushScheduled = false;
+  #defaultMetricsEnabled: {
+    cpuTime: boolean;
+    wallTime: boolean;
+    workersInvocation: boolean;
+  };
 
   constructor({ metrics }: TailExporterOptions) {
     this.#metricSinks = metrics?.sinks;
     this.#maxBufferSize = metrics?.maxBufferSize || 100;
     this.#maxBufferDuration = Math.min(metrics?.maxBufferDuration || 5, 30);
+
+    // Set default metrics configuration (all enabled by default)
+    this.#defaultMetricsEnabled = {
+      cpuTime: metrics?.defaultMetrics?.cpuTime !== false,
+      wallTime: metrics?.defaultMetrics?.wallTime !== false,
+      workersInvocation: metrics?.defaultMetrics?.workersInvocation !== false,
+    };
   }
 
   tail(traceItems: TraceItem[], env: any, ctx: ExecutionContext) {
@@ -61,6 +73,9 @@ export class TailExporter {
         outcome: traceItem.outcome,
         versionId: traceItem.scriptVersion?.id,
       };
+
+      // Add default metrics if enabled
+      this.#addDefaultMetrics(traceItem, globalTags);
 
       for (const event of metricEvents) {
         const message = event.message;
@@ -106,11 +121,9 @@ export class TailExporter {
       } catch (error) {}
     };
 
-    // Wait for the scheduled flush to complete
     ctx.waitUntil(scheduleFlush());
   }
 
-  // Private method to perform the actual flush
   async #performFlush(): Promise<void> {
     const items = this.#metrics.toMetricPayloads(this.#maxBufferDuration);
 
@@ -137,6 +150,48 @@ export class TailExporter {
       }
     } catch (error) {
       console.error("Error flushing batch:", error);
+    }
+  }
+
+  #addDefaultMetrics(
+    traceItem: TraceItem,
+    globalTags: Record<string, any>,
+  ): void {
+    if (this.#defaultMetricsEnabled.cpuTime) {
+      this.#metrics.storeMetric({
+        type: MetricType.HISTOGRAM,
+        name: "worker.cpu_time",
+        value: traceItem.cpuTime,
+        tags: globalTags,
+        timestamp: traceItem.eventTimestamp!,
+        options: {
+          aggregates: ["max", "min", "avg"],
+          percentiles: [0.5, 0.75, 0.9, 0.95, 0.99],
+        },
+      });
+    }
+
+    if (this.#defaultMetricsEnabled.wallTime) {
+      this.#metrics.storeMetric({
+        type: MetricType.HISTOGRAM,
+        name: "worker.wall_time",
+        value: traceItem.wallTime,
+        tags: globalTags,
+        timestamp: traceItem.eventTimestamp!,
+        options: {
+          aggregates: ["max", "min", "avg"],
+          percentiles: [0.5, 0.75, 0.9, 0.95, 0.99],
+        },
+      });
+    }
+    if (this.#defaultMetricsEnabled.workersInvocation) {
+      this.#metrics.storeMetric({
+        type: MetricType.COUNT,
+        name: "worker.invocation",
+        value: 1,
+        tags: globalTags,
+        timestamp: traceItem.eventTimestamp!,
+      });
     }
   }
 }

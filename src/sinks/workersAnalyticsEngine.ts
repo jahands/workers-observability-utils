@@ -61,25 +61,43 @@ export class WorkersAnalyticsEngineSink implements MetricSink {
     index: [string];
   } {
     // Create a list of blobs and doubles
+
+    const { scriptName, executionModel, outcome, versionId, ...customTags } =
+      payload.tags;
+
     const blobs: string[] = [];
     const doubles: number[] = [];
 
+    // First blob is always the metric type
     blobs.push(payload.type);
 
+    // Add doubles
     doubles.push(payload.timestamp);
     doubles.push(payload.value);
 
-    // Format tags as blobs
-    const tagValues = Object.values(payload.tags);
+    // Add special tags in a fixed order (positions 2-9)
+    blobs.push(`${scriptName || ""}`);
+    blobs.push(`${executionModel || ""}`);
+    blobs.push(`${outcome || ""}`);
+    blobs.push(`${versionId || ""}`);
 
-    for (const value of tagValues) {
-      blobs.push(`${value}`);
+    // Reserve positions 6-10 for future special tags (empty strings for now)
+    blobs.push("");
+    blobs.push("");
+    blobs.push("");
+    blobs.push("");
+    blobs.push("");
+    blobs.push("");
+
+    // Add custom tags starting from position 11
+    for (const value of Object.values(customTags)) {
+      blobs.push(`${value || ""}`);
     }
 
     return {
       blobs,
       doubles,
-      index: [payload.name],
+      index: [`${payload.name}#${scriptName}`.slice(0, 96)],
     };
   }
 }

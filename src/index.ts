@@ -11,7 +11,7 @@ export * from "./sinks/datadog";
 import * as metrics from "./metrics";
 import { TailExporter } from "./tail";
 import { DatadogMetricSink } from "./sinks/datadog";
-import { WorkersAnalyticsEngineSink } from "./sinks/wae";
+import { WorkersAnalyticsEngineSink } from "./sinks/workersAnalyticsEngine";
 
 export { metrics, TailExporter, DatadogMetricSink, WorkersAnalyticsEngineSink };
 export default {

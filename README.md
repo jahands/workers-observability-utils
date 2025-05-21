@@ -85,6 +85,15 @@ metrics.count('worker.request', 1, {
 
 To efficiently export metrics to external providers, you should set up a dedicated Tail Worker. This architecture allows your main worker to focus on handling requests, while the Tail Worker handles metric collection and export. For more information, see the [Cloudflare Tail Workers documentation](https://developers.cloudflare.com/workers/observability/logs/tail-workers/).
 
+### Multiple Sinks
+
+With this library, you can send metrics to multiple destinations simultaneously. The TailExporter supports an array of metric sinks, and each sink receives the same metrics data. Currently supported sinks include:
+
+- **Datadog** - Export metrics to Datadog for visualization and alerting
+- **Workers Analytics Engine** - Store metrics in Cloudflare's Analytics Engine for custom queries and analysis
+
+When using multiple sinks, metrics will be sent to all configured sinks in parallel. If one sink fails, the others will still receive the metrics.
+
 ### Why Use a Tail Worker?
 
 - **Separation of concerns**: Your main worker focuses on business logic
@@ -113,6 +122,12 @@ export default new TailExporter({
         datasetBinding: env.ANALYTICS_ENGINE_DATASET
       })
     ],
+    // Optional default metrics to collect automatically
+    defaultMetrics: {
+      cpuTime: true,           // default: true - collects worker.cpu_time as a GAUGE
+      wallTime: true,          // default: true - collects worker.wall_time as a GAUGE
+      workersInvocation: true, // default: true - collects worker.invocation as a COUNT
+    },
     // When using Workers Analytics Engine, a value of 20 or less is recommended due to soft limits
     maxBufferSize: 20,
     // Maximum duration in seconds to buffer before flushing (default: 5, max: 30)
@@ -165,3 +180,28 @@ The Tail Worker supports the following environment variables and bindings:
 ```
 
 **Note**: Workers Analytics Engine has a soft limit of 25 writes per invocation, so it's recommended to keep your maxBufferSize at 20 or lower when using this sink.
+
+### Default Metrics
+
+The Tail Worker can automatically collect the following metrics without any instrumentation in your main worker:
+
+1. **CPU Time** (`worker.cpu_time`) - A GAUGE metric measuring the CPU time used by the worker in milliseconds
+2. **Wall Time** (`worker.wall_time`) - A GAUGE metric measuring the total execution time of the worker in milliseconds
+3. **Workers Invocation** (`worker.invocation`) - A COUNT metric that increases by 1 for each worker invocation
+
+These metrics are collected with the same global tags that are applied to your custom metrics (scriptName, executionModel, outcome, versionId).
+
+You can enable or disable these default metrics in the TailExporter configuration:
+
+```typescript
+export default new TailExporter({
+  metrics: {
+    sinks: [...],
+    defaultMetrics: {
+      cpuTime: true,           // default: true
+      wallTime: true,          // default: true
+      workersInvocation: true, // default: true
+    }
+  }
+});
+```
