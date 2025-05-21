@@ -1,24 +1,15 @@
 import { channel, Channel } from "node:diagnostics_channel";
-import { MetricPayload, METRICS_CHANNEL_NAME, MetricType, Tags } from "./types";
+import {
+  CountMetricPayload,
+  GaugeMetricPayload,
+  HistogramMetricPayload,
+  HistogramOptions,
+  METRICS_CHANNEL_NAME,
+  MetricType,
+  Tags,
+} from "./types";
 
 const metricsChannel: Channel = channel(METRICS_CHANNEL_NAME);
-
-function publishMetric(
-  type: MetricType,
-  name: string,
-  value: any,
-  tags: Tags = {},
-  additionalData: Record<string, any> = {},
-): void {
-  metricsChannel.publish({
-    type,
-    name,
-    value,
-    tags,
-    timestamp: Date.now(),
-    ...additionalData,
-  } as MetricPayload);
-}
 
 /**
  * Record a count metric
@@ -27,9 +18,15 @@ function publishMetric(
  * @param tags - Optional tags
  */
 export function count(name: string, value: number = 1, tags: Tags = {}): void {
-  publishMetric(MetricType.COUNT, name, value, tags);
-}
+  const payload: CountMetricPayload = {
+    type: MetricType.COUNT,
+    name,
+    value,
+    tags,
+  };
 
+  metricsChannel.publish(payload);
+}
 
 /**
  * Record a gauge metric
@@ -38,5 +35,36 @@ export function count(name: string, value: number = 1, tags: Tags = {}): void {
  * @param tags - Optional tags
  */
 export function gauge(name: string, value: number, tags: Tags = {}): void {
-  publishMetric(MetricType.GAUGE, name, value, tags);
+  const payload: GaugeMetricPayload = {
+    type: MetricType.GAUGE,
+    name,
+    value,
+    tags,
+  };
+
+  metricsChannel.publish(payload);
+}
+
+/**
+ * Record a histogram metric
+ * @param name - The metric name
+ * @param value - The histogram value
+ * @param options - Optional histogram configuration
+ * @param tags - Optional tags
+ */
+export function histogram(
+  name: string,
+  value: number,
+  options: HistogramOptions = {},
+  tags: Tags = {},
+): void {
+  const payload: HistogramMetricPayload = {
+    type: MetricType.HISTOGRAM,
+    name,
+    value,
+    tags,
+    options,
+  };
+
+  metricsChannel.publish(payload);
 }

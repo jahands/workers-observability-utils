@@ -13,18 +13,28 @@ interface BaseMetricPayload {
   name: string;
   value: any;
   tags: Tags;
-  timestamp: number;
 }
 
+export type HistogramAggregates =
+  | "max"
+  | "min"
+  | "sum"
+  | "avg"
+  | "median"
+  | "count";
+
 export interface HistogramOptions {
-  buckets?: number[];
+  aggregates?: HistogramAggregates[];
+  /**
+  Percentiles can include any decimal between 0 and 1.
+  */
+  percentiles?: number[];
 }
 
 export interface CountMetricPayload extends BaseMetricPayload {
   type: MetricType.COUNT;
   value: number;
 }
-
 
 export interface GaugeMetricPayload extends BaseMetricPayload {
   type: MetricType.GAUGE;
@@ -34,12 +44,15 @@ export interface GaugeMetricPayload extends BaseMetricPayload {
 export interface HistogramMetricPayload extends BaseMetricPayload {
   type: MetricType.HISTOGRAM;
   value: number;
+  options: HistogramOptions;
 }
 
 export type MetricPayload =
   | CountMetricPayload
   | GaugeMetricPayload
   | HistogramMetricPayload;
+
+export type ExportedMetricPayload = MetricPayload & { timestamp: number };
 
 // Cloudflare Workers environment variables
 declare global {

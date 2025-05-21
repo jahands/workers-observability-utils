@@ -4,4 +4,7 @@ export default new TailExporter({
 	metrics: new DatadogMetricSink({
 		site: 'us3.datadoghq.com',
 	}),
+	options: {
+		maxBufferDuration: 1,
+	},
 });

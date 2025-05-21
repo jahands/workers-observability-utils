@@ -4,21 +4,11 @@ A lightweight, zero-dependency package for capturing and exporting metrics from 
 
 ## Features
 
-- Collect and track `COUNT`, `RATE`, and `GAUGE` metrics
+- Collect and track `COUNT`, `GAUGE`, and `HISTOGRAM` metrics
 - Auto-aggregation of metrics based on type
 - Tag support for all metrics
 - Export metrics to Datadog (other providers coming soon)
 - Separate Tail Worker architecture for efficient metrics exporting
-
-## Installation
-
-```bash
-npm install workers-observability-utils
-# or
-yarn add workers-observability-utils
-# or
-pnpm add workers-observability-utils
-```
 
 ## Basic Usage
 
@@ -27,7 +17,7 @@ pnpm add workers-observability-utils
 The main worker will capture metrics and publish them through a diagnostics channel. The `metrics` object provides methods for recording different types of metrics:
 
 ```typescript
-import { metrics } from 'workers-observability-utils';
+import * as metrics from 'workers-observability-utils/metrics';
 
 export default {
   async fetch(request, env, ctx) {
@@ -39,8 +29,16 @@ export default {
     // Record gauge metric
     metrics.gauge('worker.connections.active', 42);
 
-    // Process request...
-    return new Response('Hello World!');
+    // Record histogram metric for response time
+    const startTime = Date.now();
+    const response = await processRequest();
+    const responseTime = Date.now() - startTime;
+    metrics.histogram('worker.response_time', responseTime, {
+      percentiles: [0.5, 0.95, 0.99],
+      aggregates: ['avg', 'max']
+    });
+
+    return response;
   },
 };
 ```
@@ -59,10 +57,17 @@ This library supports three types of metrics:
    metrics.gauge('worker.memory_usage', memoryUsage, { region: 'us-east' });
    ```
 
-3. **RATE** - Measured over time (e.g., requests per second)
+3. **HISTOGRAM** - Distribution of values over time with statistical aggregations
    ```typescript
-   metrics.rate('worker.requests_rate', 1, { endpoint: '/api' });
+   metrics.histogram('worker.response_time', responseTimeMs, {
+     percentiles: [0.5, 0.95, 0.99],  // p50, p95, and p99 percentiles
+     aggregates: ['avg', 'max', 'min', 'sum', 'count']
+   }, { endpoint: '/api' });
    ```
+
+   Histogram metrics automatically generate multiple derived metrics:
+   - Percentiles (as gauges): `worker.response_time.p50`, `worker.response_time.p95`, etc.
+   - Aggregates: `worker.response_time.avg`, `worker.response_time.max`, etc.
 
 ### Tags
 

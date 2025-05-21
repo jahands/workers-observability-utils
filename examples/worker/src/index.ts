@@ -1,4 +1,4 @@
-import { metrics } from 'workers-observability-utils';
+import * as metrics from 'workers-observability-utils/metrics';
 
 export interface Env {
 	// Datadog API keys
@@ -26,7 +26,9 @@ export default {
 		let response: Response = new Response();
 		try {
 			// Record attempts metric
-			metrics.count('worker.process_attempt', 1);
+			metrics.histogram('worker.process_attempt', 1, {
+				aggregates: ['avg', 'min', 'max'],
+			});
 
 			// You could add your own business logic metrics here
 			if (request.url.includes('/api')) {
@@ -63,7 +65,9 @@ export default {
 
 		// Gauge example: track active connections (fake example)
 		const activeConnections = Math.floor(Math.random() * 100);
-		metrics.gauge('worker.connections.active', activeConnections);
+		metrics.histogram('worker.connections.active', activeConnections, {
+			aggregates: ['avg', 'min', 'max'],
+		});
 
 		return response;
 	},

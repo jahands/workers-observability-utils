@@ -1,4 +1,4 @@
-import { MetricPayload, Tags } from "../types";
+import { ExportedMetricPayload } from "../types";
 import { env } from "cloudflare:workers";
 import { MetricSink } from "./sink";
 
@@ -40,7 +40,7 @@ export class DatadogMetricSink implements MetricSink {
   /**
    * Send multiple metrics to Datadog
    */
-  async sendMetrics(payloads: MetricPayload[]): Promise<void> {
+  async sendMetrics(payloads: ExportedMetricPayload[]): Promise<void> {
     const datadogMetrics = payloads.map((payload) =>
       this.transformMetric(payload),
     );
@@ -50,7 +50,7 @@ export class DatadogMetricSink implements MetricSink {
   /**
    * Transform a metric payload to Datadog format
    */
-  private transformMetric(payload: MetricPayload): DatadogMetric {
+  private transformMetric(payload: ExportedMetricPayload): DatadogMetric {
     const formattedTags = Object.entries(payload.tags).map(
       ([key, value]) => `${key}:${value}`,
     );

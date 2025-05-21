@@ -1,5 +1,5 @@
-import { MetricPayload } from "../types";
+import { ExportedMetricPayload } from "../types";
 
 export interface MetricSink {
-  sendMetrics: (metrics: MetricPayload[]) => Promise<void>;
+  sendMetrics: (metrics: ExportedMetricPayload[]) => Promise<void>;
 }

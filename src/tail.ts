@@ -65,6 +65,7 @@ export class TailExporter {
               ...message.tags,
               ...globalTags,
             },
+            timestamp: event.timestamp,
           });
         } else {
           console.warn("Received invalid metric payload:", message);
@@ -132,8 +133,7 @@ function isValidMetric(message: unknown): message is MetricPayload {
     !("type" in message) ||
     !("name" in message) ||
     !("value" in message) ||
-    !("tags" in message) ||
-    !("timestamp" in message)
+    !("tags" in message)
   ) {
     return false;
   }
@@ -149,7 +149,6 @@ function isValidMetric(message: unknown): message is MetricPayload {
   return (
     typeof metricMsg.value === "number" &&
     typeof metricMsg.name === "string" &&
-    typeof metricMsg.timestamp === "number" &&
     typeof metricMsg.tags === "object"
   );
 }

@@ -1,4 +1,11 @@
-import { MetricPayload, MetricType, Tags } from "./types";
+import { calculateHistogramValue, calculatePercentile } from "./maths";
+import {
+  HistogramAggregates,
+  MetricPayload,
+  ExportedMetricPayload,
+  MetricType,
+  Tags,
+} from "./types";
 
 interface BaseStoredMetric {
   name: string;
@@ -16,8 +23,17 @@ interface StoredGaugeMetric extends BaseStoredMetric {
   value: number;
 }
 
+interface StoredHistogramMetric extends BaseStoredMetric {
+  type: MetricType.HISTOGRAM;
+  value: number[];
+  percentiles?: number[];
+  aggregates?: HistogramAggregates[];
+}
 
-type StoredMetric = StoredCountMetric | StoredGaugeMetric;
+type StoredMetric =
+  | StoredCountMetric
+  | StoredGaugeMetric
+  | StoredHistogramMetric;
 
 function serializeTags(tags: Tags): string {
   return Object.entries(tags)
@@ -26,10 +42,6 @@ function serializeTags(tags: Tags): string {
     .join(",");
 }
 
-/**
- * In-memory metrics database that stores metrics with different strategies
- * based on their type.
- */
 export class MetricsDb {
   private metrics: Map<string, StoredMetric> = new Map();
   private getMetricKey(metric: MetricPayload): string {
@@ -37,12 +49,7 @@ export class MetricsDb {
     return `${metric.name}:${metric.type}:${tagKey}`;
   }
 
-  /**
-   * Store a metric in the database
-   * - For COUNT metrics: accumulate the value
-   * - For GAUGE metrics: store the latest value
-   */
-  public storeMetric(metric: MetricPayload & { timestamp: number }): void {
+  public storeMetric(metric: ExportedMetricPayload): void {
     const key = this.getMetricKey(metric);
     const existingMetric = this.metrics.get(key);
 
@@ -73,12 +80,23 @@ export class MetricsDb {
         break;
       }
 
+      case MetricType.HISTOGRAM: {
+        const existingValue = existingMetric
+          ? (existingMetric.value as number[])
+          : [];
+        this.metrics.set(key, {
+          type: metric.type,
+          name: metric.name,
+          tags: metric.tags,
+          percentiles: metric.options?.percentiles,
+          aggregates: metric.options?.aggregates,
+          value: [...existingValue, metric.value],
+          lastUpdated: metric.timestamp,
+        });
+      }
     }
   }
 
-  /**
-   * Store multiple metrics at once
-   */
   public storeMetrics(
     metrics: (MetricPayload & { timestamp: number })[],
   ): void {
@@ -103,10 +121,11 @@ export class MetricsDb {
   }
 
   /**
-   * Convert stored metrics to MetricPayload format
+   * Get the Metrics in a format ready to export to various different sinks
+   * @param flushWindowS
    */
-  public toMetricPayloads(flushWindowS: number): MetricPayload[] {
-    const payloads: MetricPayload[] = [];
+  public toMetricPayloads(flushWindowS: number): ExportedMetricPayload[] {
+    const payloads: ExportedMetricPayload[] = [];
 
     for (const metric of this.metrics.values()) {
       switch (metric.type) {
@@ -120,15 +139,35 @@ export class MetricsDb {
             timestamp: metric.lastUpdated,
           });
           break;
+        case MetricType.HISTOGRAM: {
+          const sortedArray = [...metric.value].sort();
 
+          for (const percentile of metric.percentiles || []) {
+            const value = calculatePercentile(sortedArray, percentile);
+            payloads.push({
+              type: MetricType.GAUGE,
+              name: `${metric.name}.p${Math.round(percentile * 100)}`,
+              value: value,
+              tags: metric.tags,
+              timestamp: metric.lastUpdated,
+            });
+          }
+
+          for (const aggregate of metric.aggregates || []) {
+            const value = calculateHistogramValue(aggregate, metric.value);
+
+            payloads.push({
+              type: aggregate === "count" ? MetricType.COUNT : MetricType.GAUGE,
+              name: `${metric.name}.${aggregate}`,
+              value: value,
+              tags: metric.tags,
+              timestamp: metric.lastUpdated,
+            });
+          }
+        }
       }
     }
 
     return payloads;
   }
 }
-
-// Export a singleton instance for easy use
-export const metricsDb = new MetricsDb();
-
-export default metricsDb;
