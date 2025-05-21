@@ -1,11 +1,12 @@
 export const METRICS_CHANNEL_NAME = "workers-observability-metrics";
+
 export enum MetricType {
   COUNT = "COUNT",
-  RATE = "RATE",
   GAUGE = "GAUGE",
+  HISTOGRAM = "HISTOGRAM",
 }
 
-export type Tags = Record<string, string | number | boolean>;
+export type Tags = Record<string, string | number | boolean | undefined | null>;
 
 interface BaseMetricPayload {
   type: MetricType;
@@ -24,20 +25,21 @@ export interface CountMetricPayload extends BaseMetricPayload {
   value: number;
 }
 
-export interface RateMetricPayload extends BaseMetricPayload {
-  type: MetricType.RATE;
-  value: number;
-}
 
 export interface GaugeMetricPayload extends BaseMetricPayload {
   type: MetricType.GAUGE;
   value: number;
 }
 
+export interface HistogramMetricPayload extends BaseMetricPayload {
+  type: MetricType.HISTOGRAM;
+  value: number;
+}
+
 export type MetricPayload =
   | CountMetricPayload
-  | RateMetricPayload
-  | GaugeMetricPayload;
+  | GaugeMetricPayload
+  | HistogramMetricPayload;
 
 // Cloudflare Workers environment variables
 declare global {

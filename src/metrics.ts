@@ -30,15 +30,6 @@ export function count(name: string, value: number = 1, tags: Tags = {}): void {
   publishMetric(MetricType.COUNT, name, value, tags);
 }
 
-/**
- * Record a rate metric
- * @param name - The metric name
- * @param value - The rate value
- * @param tags - Optional tags
- */
-export function rate(name: string, value: number = 1, tags: Tags = {}): void {
-  publishMetric(MetricType.RATE, name, value, tags);
-}
 
 /**
  * Record a gauge metric

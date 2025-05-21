@@ -16,13 +16,8 @@ interface StoredGaugeMetric extends BaseStoredMetric {
   value: number;
 }
 
-interface StoredRateMetric extends BaseStoredMetric {
-  type: MetricType.RATE;
-  value: number[];
-  created: number;
-}
 
-type StoredMetric = StoredCountMetric | StoredGaugeMetric | StoredRateMetric;
+type StoredMetric = StoredCountMetric | StoredGaugeMetric;
 
 function serializeTags(tags: Tags): string {
   return Object.entries(tags)
@@ -46,7 +41,6 @@ export class MetricsDb {
    * Store a metric in the database
    * - For COUNT metrics: accumulate the value
    * - For GAUGE metrics: store the latest value
-   * - For RATE metrics: store an array of all values
    */
   public storeMetric(metric: MetricPayload & { timestamp: number }): void {
     const key = this.getMetricKey(metric);
@@ -79,21 +73,6 @@ export class MetricsDb {
         break;
       }
 
-      case MetricType.RATE: {
-        const existingRateMetric = existingMetric as StoredRateMetric;
-        const existingValues = existingRateMetric?.value || ([] as number[]);
-        const created = existingRateMetric?.created || metric.timestamp;
-
-        this.metrics.set(key, {
-          type: metric.type,
-          name: metric.name,
-          tags: metric.tags,
-          created: created,
-          value: [...existingValues, Number(metric.value)],
-          lastUpdated: metric.timestamp,
-        });
-        break;
-      }
     }
   }
 
@@ -142,18 +121,6 @@ export class MetricsDb {
           });
           break;
 
-        case MetricType.RATE:
-          const values = metric.value as number[];
-          const value =
-            values.reduce((acc, val) => acc + val, 0) / flushWindowS;
-          payloads.push({
-            type: metric.type,
-            name: metric.name,
-            value: value,
-            tags: metric.tags,
-            timestamp: metric.lastUpdated,
-          });
-          break;
       }
     }
 

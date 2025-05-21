@@ -49,10 +49,11 @@ export class TailExporter {
       );
 
       const globalTags = {
-        scriptName: traceItem.scriptName || "unknown",
+        scriptName: traceItem.scriptName,
         executionModel: traceItem.executionModel,
         outcome: traceItem.outcome,
-        versionId: traceItem.scriptVersion?.id || "latest",
+        versionId: traceItem.scriptVersion?.id,
+        scriptTag: traceItem.scriptVersion?.tag,
       };
 
       for (const event of metricEvents) {
