@@ -49,7 +49,7 @@ export default {
 
 This library supports three types of metrics:
 
-1. **COUNT** - Cumulative counters that only increase (e.g., request count, error count)
+1. **COUNT** - Represents the total number of occurrences. It can be incremented or decremented.  (e.g., request count, error count)
    ```typescript
    metrics.count('worker.request', 1, { status: '200' });
    ```
