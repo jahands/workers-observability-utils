@@ -54,7 +54,7 @@ This library supports three types of metrics:
 
 2. **GAUGE** - Point-in-time measurement (e.g., memory usage, connection count)
    ```typescript
-   metrics.gauge('worker.memory_usage', memoryUsage, { region: 'us-east' });
+   metrics.gauge('worker.memory_usage', memoryUsage, { region: 'earth' });
    ```
 
 3. **HISTOGRAM** - Distribution of values over time with statistical aggregations
