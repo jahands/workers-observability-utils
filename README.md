@@ -29,7 +29,9 @@ export default {
     // Record gauge metric
     metrics.gauge('worker.connections.active', 42);
 
-    // Record histogram metric for response time
+    // Record histogram metric for response time.
+    // Note: Timers are not totally accurate in cloudflare worker environments
+    // but this can give an indication of relative performance
     const startTime = Date.now();
     const response = await processRequest();
     const responseTime = Date.now() - startTime;
@@ -47,14 +49,14 @@ export default {
 
 This library supports three types of metrics:
 
-1. **COUNT** - Cumulative counters that only increase (e.g., request count, error count)
+1. **COUNT** - Represents the total number of occurrences. It can be incremented or decremented.  (e.g., request count, error count)
    ```typescript
    metrics.count('worker.request', 1, { status: '200' });
    ```
 
 2. **GAUGE** - Point-in-time measurement (e.g., memory usage, connection count)
    ```typescript
-   metrics.gauge('worker.memory_usage', memoryUsage, { region: 'us-east' });
+   metrics.gauge('worker.memory_usage', memoryUsage, { region: 'earth' });
    ```
 
 3. **HISTOGRAM** - Distribution of values over time with statistical aggregations
@@ -66,8 +68,8 @@ This library supports three types of metrics:
    ```
 
    Histogram metrics automatically generate multiple derived metrics:
-   - Percentiles (as gauges): `worker.response_time.p50`, `worker.response_time.p95`, etc.
-   - Aggregates: `worker.response_time.avg`, `worker.response_time.max`, etc.
+   - Percentiles (as gauges): `worker.cpu_time.p50`, `worker.cpu_time.p95`, etc.
+   - Aggregates: `worker.cpu_time.avg`, `worker.cpu_time.max`, etc.
 
 ### Tags
 
@@ -93,14 +95,6 @@ With this library, you can send metrics to multiple destinations simultaneously.
 - **Workers Analytics Engine** - Store metrics in Cloudflare's Analytics Engine for custom queries and analysis
 
 When using multiple sinks, metrics will be sent to all configured sinks in parallel. If one sink fails, the others will still receive the metrics.
-
-### Why Use a Tail Worker?
-
-- **Separation of concerns**: Your main worker focuses on business logic
-- **Performance**: Metric exporting won't impact your main worker's performance
-- **Resilience**: Failures in metric reporting won't affect your main worker
-- **Batching**: Efficiently aggregates and exports metrics in batches
-- **No added latency**: Metrics processing happens asynchronously
 
 ### Tail Worker Configuration
 
