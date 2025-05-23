@@ -1,4 +1,4 @@
-import { HistogramAggregates } from "./types";
+import { HistogramAggregates } from "../types";
 
 export function calculateHistogramValue(
   aggregate: HistogramAggregates,

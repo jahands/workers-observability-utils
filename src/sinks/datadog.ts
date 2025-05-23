@@ -41,10 +41,18 @@ export class DatadogMetricSink implements MetricSink {
    * Send multiple metrics to Datadog
    */
   async sendMetrics(payloads: ExportedMetricPayload[]): Promise<void> {
-    const datadogMetrics = payloads.map((payload) =>
-      this.transformMetric(payload),
-    );
-    await this.sendToDatadog(datadogMetrics);
+    if (!payloads || payloads.length === 0) {
+      return;
+    }
+    
+    try {
+      const datadogMetrics = payloads.map((payload) =>
+        this.transformMetric(payload),
+      );
+      await this.sendToDatadog(datadogMetrics);
+    } catch (error) {
+      throw new Error(`Failed to send metrics to Datadog: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
@@ -71,7 +79,7 @@ export class DatadogMetricSink implements MetricSink {
   private async sendToDatadog(metrics: DatadogMetric[]): Promise<void> {
     const endpoint =
       this.options.endpoint || `https://api.${this.options.site}/api/v1/series`;
-    console.log(metrics);
+    
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {

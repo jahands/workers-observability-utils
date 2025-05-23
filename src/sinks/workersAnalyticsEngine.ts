@@ -22,14 +22,19 @@ export class WorkersAnalyticsEngineSink implements MetricSink {
    * Send multiple metrics to Workers Analytics Engine
    */
   async sendMetrics(payloads: ExportedMetricPayload[]): Promise<void> {
-    for (const payload of payloads) {
-      await this.sendMetric(payload);
+    if (!payloads || payloads.length === 0) {
+      return;
+    }
+    
+    try {
+      for (const payload of payloads) {
+        await this.sendMetric(payload);
+      }
+    } catch (error) {
+      throw new Error(`Failed to send metrics to Workers Analytics Engine: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  /**
-   * Send a single metric to Workers Analytics Engine
-   */
   private async sendMetric(payload: ExportedMetricPayload): Promise<void> {
     const dataset = this.options.datasetBinding;
     if (!dataset) {
@@ -45,25 +50,23 @@ export class WorkersAnalyticsEngineSink implements MetricSink {
         indexes: index,
       });
     } catch (error) {
-      console.error(`Failed to write datapoint to Analytics Engine: ${error}`, {
-        error,
-      });
-      throw error;
+      throw new Error(`Failed to write datapoint to Analytics Engine: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  /**
-   * Transform a metric payload to Workers Analytics Engine format
-   */
   private transformMetric(payload: ExportedMetricPayload): {
     blobs: string[];
     doubles: number[];
     index: [string];
   } {
-    // Create a list of blobs and doubles
-
-    const { scriptName, executionModel, outcome, versionId, ...customTags } =
-      payload.tags;
+    const {
+      scriptName,
+      executionModel,
+      outcome,
+      versionId,
+      trigger,
+      ...customTags
+    } = payload.tags;
 
     const blobs: string[] = [];
     const doubles: number[] = [];
@@ -75,15 +78,14 @@ export class WorkersAnalyticsEngineSink implements MetricSink {
     doubles.push(payload.timestamp);
     doubles.push(payload.value);
 
-    // Add special tags in a fixed order (positions 2-9)
+    // Add special tags in a fixed order
     blobs.push(`${scriptName || ""}`);
     blobs.push(`${executionModel || ""}`);
     blobs.push(`${outcome || ""}`);
     blobs.push(`${versionId || ""}`);
+    blobs.push(`${trigger || ""}`);
 
-    // Reserve positions 6-10 for future special tags (empty strings for now)
-    blobs.push("");
-    blobs.push("");
+    // Reserve positions for future global tags
     blobs.push("");
     blobs.push("");
     blobs.push("");

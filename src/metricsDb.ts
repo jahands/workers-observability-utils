@@ -1,4 +1,4 @@
-import { calculateHistogramValue, calculatePercentile } from "./maths";
+import { calculateHistogramValue, calculatePercentile } from "./utils/maths";
 import {
   HistogramAggregates,
   MetricPayload,

@@ -2,8 +2,10 @@ import { METRICS_CHANNEL_NAME, MetricPayload, MetricType } from "./types";
 import { MetricsDb } from "./metricsDb";
 import { TraceItem } from "@cloudflare/workers-types";
 import type { MetricSink } from "./sinks/sink";
+import { getEventTrigger } from "./utils/cloudflare";
 export { DatadogMetricSink } from "./sinks/datadog";
 export { WorkersAnalyticsEngineSink } from "./sinks/workersAnalyticsEngine";
+export { OtelMetricSink } from "./sinks/otel";
 
 export interface LogPayload {
   level: string;
@@ -67,11 +69,14 @@ export class TailExporter {
         (el) => el.channel === METRICS_CHANNEL_NAME,
       );
 
+      const trigger = getEventTrigger(traceItem);
+
       const globalTags = {
         scriptName: traceItem.scriptName,
         executionModel: traceItem.executionModel,
         outcome: traceItem.outcome,
         versionId: traceItem.scriptVersion?.id,
+        trigger,
       };
 
       // Add default metrics if enabled
@@ -141,11 +146,13 @@ export class TailExporter {
         const results = await Promise.allSettled(
           this.#metricSinks?.map((sink) => sink.sendMetrics(items)),
         );
-        const errors = results.filter((el) => el.status === "rejected");
-        for (const error of errors) {
-          console.error("Failed to flush some metrics", {
-            error: error.reason,
+        const errors = results.filter((el) => el.status === "rejected") as PromiseRejectedResult[];
+        if (errors.length > 0) {
+          const sinkErrors = errors.map((error, index) => {
+            const sinkType = this.#metricSinks?.[index]?.constructor.name || 'Unknown';
+            return `${sinkType}: ${error.reason instanceof Error ? error.reason.message : String(error.reason)}`;
           });
+          console.error(`Failed to flush metrics to ${errors.length} sink(s): ${sinkErrors.join(', ')}`);
         }
       }
     } catch (error) {
