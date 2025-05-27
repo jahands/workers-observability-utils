@@ -54,4 +54,9 @@ export type MetricPayload =
 
 export type ExportedMetricPayload = MetricPayload & { timestamp: number };
 
-export type Env = {}
+declare module "cloudflare:workers" {
+  interface Env {
+    DD_API_KEY?: string;
+    DATADOG_API_KEY?: string;
+  }
+}

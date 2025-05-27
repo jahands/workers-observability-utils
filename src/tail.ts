@@ -1,5 +1,5 @@
 import { METRICS_CHANNEL_NAME, type MetricPayload, MetricType } from "./types";
-import type { Env } from "./types";
+import type { Env } from "cloudflare:workers";
 import { MetricsDb } from "./metricsDb";
 import type { TraceItem } from "@cloudflare/workers-types";
 import type { MetricSink } from "./sinks/sink";

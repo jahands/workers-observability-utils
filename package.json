@@ -1,6 +1,6 @@
 {
   "name": "@jahands/workers-observability-utils",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "A collection of Utilities for Capturing Logs and Metrics from Cloudflare Workers",
   "type": "module",
   "private": false,
