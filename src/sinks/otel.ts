@@ -1,15 +1,14 @@
-import { ExportedMetricPayload, MetricType } from "../types";
+import { type ExportedMetricPayload, MetricType } from "../types";
 
 import {
   AggregationTemporality,
-  KeyValue,
-  Metric,
-  OTLPMetricsPayload,
-  ResourceMetrics,
-  ScopeMetrics,
+  type KeyValue,
+  type OTLPMetricsPayload,
+  type ResourceMetrics,
+  type ScopeMetrics,
 } from "./otel-metrics-types";
 
-import { MetricSink } from "./sink";
+import type { MetricSink } from "./sink";
 
 export interface OtelMetricSinkOptions {
   url: string;
@@ -154,7 +153,8 @@ export class OtelMetricSink implements MetricSink {
           isMonotonic: true,
         },
       };
-    } else if (payload.type === MetricType.GAUGE) {
+    }
+    if (payload.type === MetricType.GAUGE) {
       return {
         name: payload.name,
         gauge: {

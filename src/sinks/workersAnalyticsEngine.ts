@@ -1,5 +1,5 @@
-import { ExportedMetricPayload } from "../types";
-import { MetricSink } from "./sink";
+import type { ExportedMetricPayload } from "../types";
+import type { MetricSink } from "./sink";
 
 export interface WAEMetricSinkOptions {
   /**
@@ -38,7 +38,7 @@ export class WorkersAnalyticsEngineSink implements MetricSink {
   private async sendMetric(payload: ExportedMetricPayload): Promise<void> {
     const dataset = this.options.datasetBinding;
     if (!dataset) {
-      throw new Error(`Dataset binding not found`);
+      throw new Error("Dataset binding not found");
     }
 
     const { blobs, doubles, index } = this.transformMetric(payload);

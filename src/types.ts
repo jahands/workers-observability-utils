@@ -53,10 +53,3 @@ export type MetricPayload =
   | HistogramMetricPayload;
 
 export type ExportedMetricPayload = MetricPayload & { timestamp: number };
-
-declare module "cloudflare:workers" {
-  interface Env {
-    DD_API_KEY?: string;
-    DATADOG_API_KEY?: string;
-  }
-}

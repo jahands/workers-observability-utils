@@ -1,5 +1,4 @@
 import { METRICS_CHANNEL_NAME, type MetricPayload, MetricType } from "./types";
-import type { Env } from "cloudflare:workers";
 import { MetricsDb } from "./metricsDb";
 import type { TraceItem } from "@cloudflare/workers-types";
 import type { MetricSink } from "./sinks/sink";
@@ -56,7 +55,7 @@ export class TailExporter {
     };
   }
 
-  tail(traceItems: TraceItem[], env: Env, ctx: ExecutionContext) {
+  tail(traceItems: TraceItem[], env: unknown, ctx: ExecutionContext) {
     for (const traceItem of traceItems) {
       const metricEvents = traceItem.diagnosticsChannelEvents.filter(
         (el) => el.channel === METRICS_CHANNEL_NAME,
