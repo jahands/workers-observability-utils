@@ -3,7 +3,6 @@ import { ExportedMetricPayload, MetricType } from "../types";
 import {
   AggregationTemporality,
   KeyValue,
-  Metric,
   OTLPMetricsPayload,
   ResourceMetrics,
   ScopeMetrics,
@@ -100,9 +99,7 @@ export class OtelMetricSink implements MetricSink {
   }
 
   private async exportMetrics(payload: OTLPMetricsPayload): Promise<void> {
-    const url = this.options.url.endsWith("/v1/metrics")
-      ? this.options.url
-      : `${this.options.url}/v1/metrics`;
+    const url = this.options.url;
     const response = await fetch(url, {
       method: "POST",
       headers: {
