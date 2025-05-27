@@ -24,7 +24,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "vitest"
   },
   "keywords": [
     "cloudflare",
@@ -36,8 +37,10 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.32",
     "@cloudflare/workers-types": "^4.20250519.0",
     "@types/node": "^22.15.19",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^3.1.4"
   }
 }

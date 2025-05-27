@@ -1,19 +1,12 @@
-import { METRICS_CHANNEL_NAME, MetricPayload, MetricType } from "./types";
+import { METRICS_CHANNEL_NAME, type MetricPayload, MetricType } from "./types";
+import type { Env } from "cloudflare:workers";
 import { MetricsDb } from "./metricsDb";
-import { TraceItem } from "@cloudflare/workers-types";
+import type { TraceItem } from "@cloudflare/workers-types";
 import type { MetricSink } from "./sinks/sink";
 import { getEventTrigger } from "./utils/cloudflare";
 export { DatadogMetricSink } from "./sinks/datadog";
 export { WorkersAnalyticsEngineSink } from "./sinks/workersAnalyticsEngine";
 export { OtelMetricSink } from "./sinks/otel";
-
-export interface LogPayload {
-  level: string;
-  message: string;
-  timestamp: number;
-  context?: Record<string, any>;
-  [key: string]: any;
-}
 
 export interface TailExporterOptions {
   metrics?: {
@@ -41,7 +34,7 @@ export class TailExporter {
   #metricSinks?: MetricSink[];
   #maxBufferSize: number;
   #maxBufferDuration: number;
-  #flushId: number = 0;
+  #flushId = 0;
   #metrics = new MetricsDb();
   #flushScheduled = false;
   #defaultMetricsEnabled: {
@@ -63,7 +56,7 @@ export class TailExporter {
     };
   }
 
-  tail(traceItems: TraceItem[], env: any, ctx: ExecutionContext) {
+  tail(traceItems: TraceItem[], env: Env, ctx: ExecutionContext) {
     for (const traceItem of traceItems) {
       const metricEvents = traceItem.diagnosticsChannelEvents.filter(
         (el) => el.channel === METRICS_CHANNEL_NAME,
@@ -114,19 +107,22 @@ export class TailExporter {
       return;
     }
 
-    this.#flushScheduled = true;
-    const scheduleFlush = async () => {
-      try {
-        const localFlushId = ++this.#flushId;
-        await scheduler.wait(this.#maxBufferDuration * 1000);
+    // Only schedule flush if there are metrics to flush
+    if (this.#metrics.getMetricCount() > 0) {
+      this.#flushScheduled = true;
+      const scheduleFlush = async () => {
+        try {
+          const localFlushId = ++this.#flushId;
+          await scheduler.wait(this.#maxBufferDuration * 1000);
 
-        if (localFlushId === this.#flushId) {
-          await this.#performFlush();
-        }
-      } catch (error) {}
-    };
+          if (localFlushId === this.#flushId) {
+            await this.#performFlush();
+          }
+        } catch (error) {}
+      };
 
-    ctx.waitUntil(scheduleFlush());
+      ctx.waitUntil(scheduleFlush());
+    }
   }
 
   async #performFlush(): Promise<void> {
@@ -149,8 +145,7 @@ export class TailExporter {
         const errors = results.filter((el) => el.status === "rejected") as PromiseRejectedResult[];
         if (errors.length > 0) {
           const sinkErrors = errors.map((error, index) => {
-            const sinkType = this.#metricSinks?.[index]?.constructor.name || 'Unknown';
-            return `${sinkType}: ${error.reason instanceof Error ? error.reason.message : String(error.reason)}`;
+            return `${error.reason instanceof Error ? error.reason.message : String(error.reason)}`;
           });
           console.error(`Failed to flush metrics to ${errors.length} sink(s): ${sinkErrors.join(', ')}`);
         }

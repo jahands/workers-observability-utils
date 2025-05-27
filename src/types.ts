@@ -11,7 +11,7 @@ export type Tags = Record<string, string | number | boolean | undefined | null>;
 interface BaseMetricPayload {
   type: MetricType;
   name: string;
-  value: any;
+  value: number;
   tags: Tags;
 }
 
@@ -54,17 +54,6 @@ export type MetricPayload =
 
 export type ExportedMetricPayload = MetricPayload & { timestamp: number };
 
-// Cloudflare Workers environment variables
-declare global {
-  namespace NodeJS {
-    interface ProcessEnv {
-      DD_API_KEY?: string;
-      DATADOG_API_KEY?: string;
-    }
-  }
-}
-
-// For Cloudflare Workers env binding
 declare module "cloudflare:workers" {
   interface Env {
     DD_API_KEY?: string;
